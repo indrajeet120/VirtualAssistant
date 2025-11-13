@@ -17,7 +17,7 @@ app.use(cookieParser())
 
 
 app.use(cors({
-  origin: "https://virtualassistant-8gq7.onrender.com",
+  origin: "https://virtualassistant1-2xpz.onrender.com", 
  
   credentials: true
 }));
