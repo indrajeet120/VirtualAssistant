@@ -17,27 +17,16 @@ function Customize2  () {
     const handleUpdateAssistant= async()=>{
       setLoading(true)
         try {
-            // let formData = new FormData()
-            // formData.append("assistantName" , assistantName)
-            // if(backendImage){
-            //     formData.append("assistantImage" ,backendImage)
-            // }else{
-            //     formData.append("imageUrl",selectedImage)
-            // }
-            // const result= await axios.post(`${serverUrl}/api/user/update`,formData,{withCredentials:true})
+            let formData = new FormData()
+            formData.append("assistantName" , assistantName)
+            if(backendImage){
+                formData.append("assistantImage" ,backendImage)
+            }else{
+                formData.append("imageUrl",selectedImage)
+            }
+            const result= await axios.post(`${serverUrl}/api/user/update`,formData,{withCredentials:true})
 
-            const payload = {
-  assistantName: assistantName,
-  imageUrl: selectedImage || backendImage || null,
-};
-
-const result = await axios.post(
-  `${serverUrl}/api/user/update`,
-  payload,
-  { withCredentials: true }
-);
-
-            setLoading(false)
+           setLoading(false)
             console.log(result.data)
             setUserData(result.data)
             navigate("/")
