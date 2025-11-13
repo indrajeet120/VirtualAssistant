@@ -8,7 +8,7 @@ import axios from "axios";
 export const userDataContext = createContext();
 
 function UserContext({ children }) {
-  const serverUrl = "https://virtualassistantbakend.onrender.com";
+  const serverUrl = "https://virtualassistantbakend1.onrender.com";
   const [userData, setUserData] = useState(null);
 
   // 🔹 Extra states for images and selection
