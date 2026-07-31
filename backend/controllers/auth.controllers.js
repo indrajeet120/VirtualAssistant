@@ -7,6 +7,19 @@ export const signUp = async(req,res)=>{
     try {
         const {name, email,password}=req.body
 
+        // Add validation here
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                message: "All fields are required"
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters"
+            });
+        }
+
         const existEmail=await User.findOne({email});
         if(existEmail){
             return res.status(400).json({message:"email already exist!"})
@@ -83,13 +96,10 @@ export const logOut=async (req,res)=>{
         const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
         res.clearCookie("token", {
           httpOnly: true,
-<<<<<<< HEAD
-          sameSite: "none",
-          secure: true
-=======
           sameSite: isHttps ? "none" : "lax",
-          secure: isHttps
->>>>>>> a7a9f5d (Fix Render trust proxy & cross-site cookies)
+          secure: isHttps,
+
+
         });
         return res.status(200).json({message:"log out successfully"})
     } catch (error) {
