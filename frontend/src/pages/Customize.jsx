@@ -21,6 +21,12 @@ function Customize () {
 
          const navigate = useNavigate()
 
+         React.useEffect(() => {
+            if (!userData) {
+              navigate("/signin");
+            }
+          }, [userData]);
+
     const inputImage =useRef()
 
     const handleImage= (e)=>{

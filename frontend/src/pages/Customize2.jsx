@@ -30,8 +30,12 @@ function Customize2  () {
             setUserData(result.data)
             navigate("/")
         } catch (error) {
-          setLoading(false)
-            console.log(error)
+          setLoading(false);
+          console.log(error);
+          if (error.response?.status === 401) {
+            alert("Please log in or sign up first to customize your assistant.");
+            navigate("/signin");
+          }
         }
     }
 
