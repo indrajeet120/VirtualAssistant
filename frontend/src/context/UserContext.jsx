@@ -150,7 +150,7 @@ function UserContext({ children }) {
   // This automatically detects if you are working locally or on Render
   const serverUrl = window.location.hostname === "localhost" 
     ? "http://localhost:8000" 
-    : "https://your-backend-service-name.onrender.com"; // <-- Replace with your real Render Backend URL
+    : "https://virtualassistant-kpfp.onrender.com";
 
   const [userData, setUserData] = useState(null);
 
