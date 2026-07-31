@@ -24,12 +24,12 @@ export const signUp = async(req,res)=>{
 
         const token= await genToken(user._id)
 
-        const isProd = process.env.NODE_ENV === "production";
+        const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
         const cookieOptions = {
           httpOnly: true,
           maxAge: 7 * 24 * 60 * 60 * 1000,
-          sameSite: isProd ? "none" : "lax",
-          secure: isProd
+          sameSite: isHttps ? "none" : "lax",
+          secure: isHttps
         };
 
         res.cookie("token", token, cookieOptions);
@@ -59,12 +59,17 @@ export const Login = async(req,res)=>{
 
         const token= await genToken(user._id)
 
-        const isProd = process.env.NODE_ENV === "production";
+        const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
         const cookieOptions = {
           httpOnly: true,
           maxAge: 7 * 24 * 60 * 60 * 1000,
+<<<<<<< HEAD
           sameSite: "none",
           secure: true
+=======
+          sameSite: isHttps ? "none" : "lax",
+          secure: isHttps
+>>>>>>> a7a9f5d (Fix Render trust proxy & cross-site cookies)
         };
 
         res.cookie("token", token, cookieOptions);
@@ -79,11 +84,16 @@ export const Login = async(req,res)=>{
 
 export const logOut=async (req,res)=>{
     try {
-        const isProd = process.env.NODE_ENV === "production";
+        const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
         res.clearCookie("token", {
           httpOnly: true,
+<<<<<<< HEAD
           sameSite: "none",
           secure: true
+=======
+          sameSite: isHttps ? "none" : "lax",
+          secure: isHttps
+>>>>>>> a7a9f5d (Fix Render trust proxy & cross-site cookies)
         });
         return res.status(200).json({message:"log out successfully"})
     } catch (error) {
