@@ -11,11 +11,11 @@ function SignUp() {
     const [showPassword,setShowPassword] =useState(false)
     const {serverUrl,userData, setUserData} = useContext(userDataContext)
     const  navigate = useNavigate()
-    const [name , setName] = useState(" ")
-     const [loading, setLoading] = useState("")
+    const [name , setName] = useState("")
+     const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
-    const [err , setErr] = useState(" ")
+    const [err , setErr] = useState("")
     
     const handleSignUp=async (e)=>{
          e.preventDefault()
@@ -36,7 +36,7 @@ function SignUp() {
         console.log(error)
         setUserData(null)
         setLoading(false)
-        setErr(error.response.data.message)
+        setErr(error.response?.data?.message || "Sign up failed")
       }
     }
 
@@ -55,15 +55,15 @@ function SignUp() {
      border-white bg-transparent text-white placeholder-gray-300 px-[20px] py-[10px] rounded-full text-[18px]'
      required onChange={(e)=>setEmail(e.target.value)} value={email}/>
 
-    <div className='w-full h-[60px] boarder-2 border-white bg-transparent text-white rounded-full text-[18px]'>
+    <div className='relative w-full h-[60px] flex items-center'>
        <input type= {showPassword?"text":"password"} placeholder='password' className='w-full h-full outline-none border-2
      border-white bg-transparent text-white placeholder-gray-300 px-[20px] py-[10px] rounded-full text-[18px]'
       required onChange={(e)=>setPassword(e.target.value)} value={password}/>
 
-      {!showPassword &&  <MdRemoveRedEye  className='absolute top-[349px]  right-[20px] w-[25px] h-[25px] text-[white] cursor-pointer'
+      {!showPassword &&  <MdRemoveRedEye  className='absolute right-[20px] w-[25px] h-[25px] text-[white] cursor-pointer'
         onClick={()=> setShowPassword(true)}/>}
 
-      {showPassword &&  <IoMdEyeOff  className='absolute top-[349px] right-[20px] w-[25px] h-[25px] text-[white] cursor-pointer'
+      {showPassword &&  <IoMdEyeOff  className='absolute right-[20px] w-[25px] h-[25px] text-[white] cursor-pointer'
        onClick={()=> setShowPassword(false)}/>}
      
       </div>

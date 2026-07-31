@@ -1,5 +1,5 @@
 import genToken from "../config/token.js"
-import User from "../moduls/user.model.js"
+import User from "../moduls/user.moduls.js"
 import bcrypt from "bcryptjs"
 
 
@@ -24,7 +24,15 @@ export const signUp = async(req,res)=>{
 
         const token= await genToken(user._id)
 
-        res.cookie("token",token,{httpOnly:true, maxAge:7*24*60*60*1000, sameSite:"strict",secure:false})
+        const isProd = process.env.NODE_ENV === "production";
+        const cookieOptions = {
+          httpOnly: true,
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          sameSite: isProd ? "none" : "lax",
+          secure: isProd
+        };
+
+        res.cookie("token", token, cookieOptions);
 
 
         return res.status(201).json(user)
@@ -51,7 +59,15 @@ export const Login = async(req,res)=>{
 
         const token= await genToken(user._id)
 
-        res.cookie("token",token,{httpOnly:true, maxAge:7*24*60*60*1000, sameSite:"strict",secure:false})
+        const isProd = process.env.NODE_ENV === "production";
+        const cookieOptions = {
+          httpOnly: true,
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          sameSite: isProd ? "none" : "lax",
+          secure: isProd
+        };
+
+        res.cookie("token", token, cookieOptions);
 
 
         return res.status(200).json(user)
@@ -63,7 +79,12 @@ export const Login = async(req,res)=>{
 
 export const logOut=async (req,res)=>{
     try {
-        res.clearCookie("token")
+        const isProd = process.env.NODE_ENV === "production";
+        res.clearCookie("token", {
+          httpOnly: true,
+          sameSite: isProd ? "none" : "lax",
+          secure: isProd
+        });
         return res.status(200).json({message:"log out successfully"})
     } catch (error) {
         return res.status(500).json({message:`logout error ${error}`})

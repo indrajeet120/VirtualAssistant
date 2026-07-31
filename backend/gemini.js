@@ -1,128 +1,89 @@
-import axios from "axios"
+import axios from "axios";
 
+const geminiResponse = async (command, assistantName, userName) => {
+  try {
+    const groqKey = process.env.GROQ_API_KEY;
+    const prompt = `You are a virtual assistant named ${assistantName} created by ${userName}. You are not Google.
+Your task is to understand user input in ANY language (English, Hindi, or Hinglish) and respond ONLY with a valid JSON object like this:
 
-const geminiResponse=async(command ,assistantName,userName) =>{
-    try {
-        const apiUrl=process.env.GEMINI_API_URL 
-
-       const prompt= `You are a virtual assistant named ${assistantName} created by 
-       ${userName}.
-       Your are not Google. You will now behave like a voice-enabled assistantName. 
-       
-       Your task is to understand the user's natural language input and respond with a JSON
-       object like this:
-       
-       {
-         
-         "type": "general" | "google-search" | "youtube-search" | "youtube-play" |
-         "get-time" | "get-date" | "get-day" | "get-month" | "calculator-open" |
-         "instagram-open" | "facebook-open" | "weather-show",
-         
-         "userInput: "<original user input>" {only remove your name from userinput if
-         exists} and agar kisi ne google ya youtube pe kuch search karne ko bola hai to
-         userInput me only bo search waala text jaye,
-         "response": "<a short spoken response to read out loud to the user>"
-       }
-       Instructions:
-       -"type":determine the intent of the user.
-       -"userInput": original sentence the user spoken.
-       -"response": A short voice-friendly reply, e.g., "Sure, playing it now", 
-          "Here's what I found", "Today is tuesday", etc.
-
-        Type meanings:  
-         - "general": if it's a factual or informational question.
-           aur agar koi aise question puchta hai jiske answer tume pata hai usko
-           bhi general ki category me rakho bas short answer dena
-         -"google-search": if user wants to search something on google.
-         -"youtube-search": if user wants to search something on youtube.
-         -"youtube-play": if user wants to directly play a video or song.
-         -calculator-open": if user wants to open a calculater.
-         -"instagram-open": if user wants to open a instagram.
-         -"facebook-open": if user wants to open a facebook.
-         -"weather-show": if user wants to know weather.
-         -"get-time": if user asks for current time.
-         -"get-date": if user asks for todate's date.
-         -"get-day": if user asks what day it is.
-         -"get-month": if user asks for the current month.
-
-
-         Important:
-         -Use ${userName} agar koi puche tume kisne banaya
-         -Only respond with the JSON object, nothing else.
-
-
-         now your userInput- ${command}
-       `;
-
-
-        const result = await axios.post(apiUrl,{
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
-        })
-        return result.data.candidates[0].content.parts[0].text
-    } catch (error) {
-        console.log(error)
-    }
+{
+  "type": "general" | "google-search" | "google-open" | "youtube-search" | "youtube-play" | "youtube-open" | "github-open" | "chatgpt-open" | "gmail-open" | "get-time" | "get-date" | "get-day" | "get-month" | "calculator-open" | "instagram-open" | "facebook-open" | "weather-show",
+  "language": "hi" | "en",
+  "userInput": "<cleaned query term or song name without assistant name or trigger words>",
+  "response": "<a spoken voice-friendly response in the SAME language/tone as the user's input>"
 }
 
+Instructions for Language Detection & Response:
+1. AUTOMATIC LANGUAGE DETECTION:
+   - Detect the language of User Input automatically ("hi" or "en").
 
-export default geminiResponse
+2. YOUTUBE PLAY & SONG COMMANDS:
+   - If user asks to play a song, video, or search on YouTube (e.g. "youtube open karo aur aaj ki raat song play karo", "play Aaj Ki Raat song on youtube", "aaj ki raat gaana chalao", "youtube par song chalao"):
+     - Set "type" to "youtube-play" or "youtube-search".
+     - Set "userInput" to ONLY the target song/video name (e.g. "aaj ki raat song").
+     - Set "response" to a voice confirmation in user's language (e.g. "YouTube par aaj ki raat song chala raha hu" / "Playing Aaj Ki Raat song on YouTube").
 
+3. OPEN COMMANDS:
+   - ONLY if user asks to open/launch a website/app without requesting a specific song or search query:
+     - Set "type" to the matching "-open" type (e.g. "youtube-open", "google-open", "github-open", "chatgpt-open", "gmail-open", "instagram-open", "facebook-open", "calculator-open", "weather-show").
+     - Set "response" to a short voice confirmation in user's language (e.g. "Opening YouTube", "YouTube khol raha hu").
 
-// import axios from "axios";
+4. GENERAL QUESTIONS:
+   - For ANY question, explanation, definition, coding request, or conversation:
+     - Set "type" to "general".
+     - Set "response" to a concise 1-2 sentence spoken answer in detected language.
 
-// const geminiResponse = async (command, assistantName, userName) => {
-//   try {
-//     const apiUrl = process.env.GEMINI_API_URL;
-//     if (!apiUrl) throw new Error("GEMINI_API_URL not set in .env");
+User Input: "${command}"`;
 
-//     const prompt = `
-// You are a virtual assistant named ${assistantName}, created by ${userName}.
-// Return ONLY a JSON object with this structure (no extra text, no markdown):
+    if (groqKey) {
+      try {
+        const groqResult = await axios.post(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" }
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
 
-// {
-//   "type": "general" | "google-search" | "youtube-search" | "youtube-play" |
-//            "get-time" | "get-date" | "get-day" | "get-month" |
-//            "calculator-open" | "instagram-open" | "facebook-open" | "weather-show",
-//   "userInput": "<cleaned user input>",
-//   "response": "<short spoken reply>"
-// }
+        const rawJson = groqResult.data?.choices?.[0]?.message?.content;
+        if (rawJson) {
+          return JSON.parse(rawJson);
+        }
+      } catch (groqErr) {
+        console.error("❌ Groq API Error:", groqErr.response?.data || groqErr.message);
+      }
+    }
 
-// User said: "${command}"
-//     `;
+    // Fallback to Gemini API if Groq fails or is not set
+    const apiUrl = process.env.GEMINI_API_URL;
+    if (!apiUrl) {
+      console.error("❌ GEMINI_API_URL is missing in .env file");
+      return null;
+    }
 
-//     const result = await axios.post(apiUrl, {
-//       contents: [{ parts: [{ text: prompt }] }],
-//     });
+    const result = await axios.post(apiUrl, {
+      contents: [{
+        parts: [{ text: prompt }]
+      }]
+    });
 
-//     console.log("Gemini raw result:", JSON.stringify(result.data, null, 2));
+    const rawText = result?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) return null;
 
-//     let raw =
-//       result?.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-//       result?.data?.candidates?.[0]?.content?.[0]?.text;
+    const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+    return JSON.parse(cleanJson);
 
-//     if (!raw) throw new Error("No valid text returned from Gemini API");
+  } catch (error) {
+    console.error("❌ Assistant API Error:", error.message);
+    return null;
+  }
+};
 
-//     // 🧹 Clean markdown fences if present
-//     raw = raw.replace(/```json|```/g, "").trim();
-
-//     let parsed;
-//     try {
-//       parsed = JSON.parse(raw);
-//     } catch (err) {
-//       console.error("Still invalid JSON:", raw);
-//       parsed = { type: "general", userInput: command, response: raw };
-//     }
-
-//     return parsed;
-//   } catch (error) {
-//     console.error("Gemini API Error:", error.response?.data || error.message);
-//     throw error;
-//   }
-// };
-
-
-
-
-//export default geminiResponse;
+export default geminiResponse;
