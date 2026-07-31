@@ -63,13 +63,9 @@ export const Login = async(req,res)=>{
         const cookieOptions = {
           httpOnly: true,
           maxAge: 7 * 24 * 60 * 60 * 1000,
-<<<<<<< HEAD
-          sameSite: "none",
-          secure: true
-=======
           sameSite: isHttps ? "none" : "lax",
           secure: isHttps
->>>>>>> a7a9f5d (Fix Render trust proxy & cross-site cookies)
+        
         };
 
         res.cookie("token", token, cookieOptions);
