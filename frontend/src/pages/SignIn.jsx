@@ -25,6 +25,9 @@ function SignIn() {
         let result = await axios.post(`${serverUrl}/api/auth/signin`,{
            email,password },{withCredentials:true})
           //console.log(result.data)
+          if (result.data?.token) {
+            localStorage.setItem("token", result.data.token);
+          }
           setUserData(result.data)
           setLoading(false)
           navigate("/")

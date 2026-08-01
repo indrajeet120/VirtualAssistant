@@ -159,18 +159,21 @@ function UserContext({ children }) {
   const [backendImage, setBackendImage] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   // Fetch current logged-in user
   const handleCurrentUser = async () => {
     try {
       const res = await axios.get(`${serverUrl}/api/user/current`, {
         withCredentials: true,
+        headers: getAuthHeaders(),
       });
       setUserData(res.data);
       console.log("✅ User session restored:", res.data);
     } catch (error) {
-      // 2. SILENT ERROR HANDLING
-      // We check for 401 (Unauthorized) which means guest user.
-      // This prevents the console from being filled with scary error messages.
       if (error.response?.status === 401) {
         console.log("ℹ️ Guest User: No active session found.");
       } else {
@@ -189,12 +192,14 @@ function UserContext({ children }) {
     try {
       const res = await axios.post(
         `${serverUrl}/api/user/asktoassistant`,
-        { command }, // Ensure your backend controller expects 'command' or 'prompt'
-        { withCredentials: true }
+        { command },
+        { 
+          withCredentials: true,
+          headers: getAuthHeaders(),
+        }
       );
       return res.data;
     } catch (error) {
-      // 3. RATE LIMIT HANDLING (429)
       if (error.response?.status === 429) {
          return { response: "I am a bit busy right now. Please wait a minute.", type: "error" };
       }

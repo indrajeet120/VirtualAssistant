@@ -47,8 +47,11 @@ export const signUp = async(req,res)=>{
 
         res.cookie("token", token, cookieOptions);
 
+        const userData = user.toObject ? user.toObject() : { ...user };
+        delete userData.password;
+        userData.token = token;
 
-        return res.status(201).json(user)
+        return res.status(201).json(userData);
     } catch (error) {
         return res.status(500).json({message:`sign up error ${error}`})
         
@@ -83,8 +86,11 @@ export const Login = async(req,res)=>{
 
         res.cookie("token", token, cookieOptions);
 
+        const userData = user.toObject ? user.toObject() : { ...user };
+        delete userData.password;
+        userData.token = token;
 
-        return res.status(200).json(user)
+        return res.status(200).json(userData);
     } catch (error) {
         return res.status(500).json({message:`login error ${error}`})
         

@@ -27,9 +27,16 @@ import jwt from "jsonwebtoken";
 
 const isAuth = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
+        let token = req.cookies.token;
+
+        // Fallback to Authorization header if third-party cookies are blocked by browser
+        if (!token && req.headers.authorization) {
+            if (req.headers.authorization.startsWith("Bearer ")) {
+                token = req.headers.authorization.split(" ")[1];
+            }
+        }
+
         if (!token) {
-            // 401 is the standard for "Not Authenticated"
             return res.status(401).json({ message: "No token, authorization denied" });
         }
 

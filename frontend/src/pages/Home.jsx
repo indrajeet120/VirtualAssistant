@@ -324,30 +324,45 @@ function Home() {
       setListening(false);
     };
 
+    let speechDebounceTimer = null;
+
     recognition.onresult = (event) => {
-      let finalTranscript = "";
+      let currentTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0]?.transcript || "";
+        currentTranscript += event.results[i][0]?.transcript || "";
+      }
+
+      currentTranscript = currentTranscript.trim();
+      if (!currentTranscript) return;
+
+      const isFinal = event.results[event.results.length - 1]?.isFinal;
+
+      const processRecognizedText = (text) => {
+        if (!text) return;
+        const assistantName = (userData?.assistantName || "").trim().toLowerCase();
+        let queryText = text;
+        if (assistantName && queryText.toLowerCase().includes(assistantName)) {
+          const regex = new RegExp(assistantName, "gi");
+          queryText = queryText.replace(regex, "").trim();
         }
+
+        const textToSend = queryText.length > 0 ? queryText : text;
+        console.log("Sending message to AI:", textToSend);
+        handleAskQuestion(textToSend);
+      };
+
+      if (isFinal) {
+        if (speechDebounceTimer) clearTimeout(speechDebounceTimer);
+        processRecognizedText(currentTranscript);
+        return;
       }
 
-      finalTranscript = finalTranscript.trim();
-      if (!finalTranscript) return;
-
-      console.log("Final transcript received:", finalTranscript);
-
-      const assistantName = (userData?.assistantName || "").trim().toLowerCase();
-      let queryText = finalTranscript;
-      if (assistantName && queryText.toLowerCase().includes(assistantName)) {
-        const regex = new RegExp(assistantName, "gi");
-        queryText = queryText.replace(regex, "").trim();
-      }
-
-      const textToSend = queryText.length > 0 ? queryText : finalTranscript;
-      console.log("Sending message to AI:", textToSend);
-      handleAskQuestion(textToSend);
+      // Fast response: Process 450ms after user finishes speaking
+      if (speechDebounceTimer) clearTimeout(speechDebounceTimer);
+      speechDebounceTimer = setTimeout(() => {
+        processRecognizedText(currentTranscript);
+      }, 450);
     };
 
     const speakGreeting = () => {
