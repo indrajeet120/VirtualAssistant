@@ -76,6 +76,7 @@ function Home() {
 
   const isSpeakingRef = useRef(false);
   const isRecognizingRef = useRef(false);
+  const isProcessingRef = useRef(false);
   const recognitionRef = useRef(null);
   const synth = window.speechSynthesis;
   const restartTimerRef = useRef(null);
@@ -96,7 +97,7 @@ function Home() {
   };
 
   const startRecognition = () => {
-    if (isSpeakingRef.current || isRecognizingRef.current) return;
+    if (isSpeakingRef.current || isRecognizingRef.current || isProcessingRef.current || synth.speaking) return;
     try {
       recognitionRef.current?.start();
     } catch (err) {
@@ -106,58 +107,70 @@ function Home() {
     }
   };
 
-  const speak = (text, targetLang = "en") => {
-    if (!text) return;
-    console.log("Speaking response:", text);
-
-    try {
-      synth.cancel();
-    } catch (e) {}
-
-    // Temporarily stop microphone recognition while assistant speaks
+  const stopRecognition = () => {
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
     try {
       recognitionRef.current?.stop();
-    } catch (e) {}
+    } catch (err) {}
     isRecognizingRef.current = false;
     setListening(false);
+    console.log("Recognition Stopped");
+  };
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = synth.getVoices();
+  const speak = (text, targetLang = "en") => {
+    if (!text) return;
 
-    const isHindiText = targetLang === "hi" || /[\u0900-\u097F]/.test(text) || /\b(kya|hai|batao|karo|hota|raha|hu|kholo|khol)\b/i.test(text);
-
-    if (isHindiText) {
-      utterance.lang = "hi-IN";
-      const hindiVoice = voices.find((v) => v.lang === "hi-IN" || v.lang.includes("hi"));
-      if (hindiVoice) utterance.voice = hindiVoice;
-    } else {
-      utterance.lang = "en-IN";
-      const indianVoice = voices.find((v) => v.lang === "en-IN" || v.lang.includes("en-IN"));
-      const engVoice = voices.find((v) => v.lang.includes("en"));
-      if (indianVoice) utterance.voice = indianVoice;
-      else if (engVoice) utterance.voice = engVoice;
+    if (synth.speaking) {
+      synth.cancel();
     }
 
-    isSpeakingRef.current = true;
-    setAiText(text);
+    stopRecognition();
 
-    utterance.onend = () => {
-      // Keep AI response text visible on screen so user can read it
-      isSpeakingRef.current = false;
-      setTimeout(() => {
-        startRecognition();
-      }, 500);
-    };
+    setTimeout(() => {
+      console.log("Speaking Started");
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = synth.getVoices();
 
-    utterance.onerror = (e) => {
-      console.error("Speech synthesis error:", e);
-      isSpeakingRef.current = false;
-      setTimeout(() => {
-        startRecognition();
-      }, 500);
-    };
+      const isHindiText = targetLang === "hi" || /[\u0900-\u097F]/.test(text) || /\b(kya|hai|batao|karo|hota|raha|hu|kholo|khol)\b/i.test(text);
 
-    synth.speak(utterance);
+      if (isHindiText) {
+        utterance.lang = "hi-IN";
+        const hindiVoice = voices.find((v) => v.lang === "hi-IN" || v.lang.includes("hi"));
+        if (hindiVoice) utterance.voice = hindiVoice;
+      } else {
+        utterance.lang = "en-IN";
+        const indianVoice = voices.find((v) => v.lang === "en-IN" || v.lang.includes("en-IN"));
+        const engVoice = voices.find((v) => v.lang.includes("en"));
+        if (indianVoice) utterance.voice = indianVoice;
+        else if (engVoice) utterance.voice = engVoice;
+      }
+
+      isSpeakingRef.current = true;
+      setAiText(text);
+
+      const onSpeechEnd = () => {
+        console.log("Speaking Finished");
+        isSpeakingRef.current = false;
+        isProcessingRef.current = false;
+        setTimeout(() => {
+          if (!isSpeakingRef.current && !synth.speaking && !isProcessingRef.current) {
+            console.log("Recognition Restarted");
+            startRecognition();
+          }
+        }, 500);
+      };
+
+      utterance.onend = onSpeechEnd;
+      utterance.onerror = (e) => {
+        console.error("Speech synthesis error:", e);
+        onSpeechEnd();
+      };
+
+      synth.speak(utterance);
+    }, 200);
   };
 
   const openUrl = (url) => {
@@ -218,7 +231,6 @@ function Home() {
       const confirmText = isHindi ? `${targetSite} website khol raha hu.` : `Opening ${targetSite}.`;
       speak(confirmText, isHindi ? "hi" : "en");
 
-      // Open Google Search for official website (using btnI feeling lucky / official website query)
       const officialSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(targetSite + " official website")}&btnI=1`;
       openUrl(officialSearchUrl);
       return true;
@@ -228,25 +240,21 @@ function Home() {
   };
 
   const handleAskQuestion = async (queryText) => {
-    if (!queryText) return;
-    const cleanQuery = queryText.trim();
+    if (!queryText || isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-    // Stop recognition while processing input
-    try {
-      recognitionRef.current?.stop();
-    } catch (err) {}
-    isRecognizingRef.current = false;
-    setListening(false);
+    stopRecognition();
+
+    const cleanQuery = queryText.trim();
 
     // 1. INSTANT FRONTEND INTENT DETECTION (Runs before Groq API)
     const wasOpenCommand = checkAndExecuteOpenCommand(cleanQuery);
     if (wasOpenCommand) {
-      console.log("⚡ Executed Open Command directly on frontend for:", cleanQuery);
       return;
     }
 
     // 2. GENERAL AI QUESTION (Send to Groq API)
-    console.log("🤖 Sending query to Groq AI:", cleanQuery);
+    console.log("Sending API Request");
     setUserText(cleanQuery);
     setAiText("");
     setLoading(true);
@@ -255,7 +263,7 @@ function Home() {
       const data = await getGeminiResponse(cleanQuery);
       setLoading(false);
       if (data && data.response) {
-        console.log("AI response received:", data.response, "Language:", data.language);
+        console.log("Received Response");
         setUserText("");
         setAiText(data.response);
         speak(data.response, data.language || "en");
@@ -276,23 +284,23 @@ function Home() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-IN"; // Multi-lingual Indian English/Hindi support
+    recognition.interimResults = false; // Ignore interim results
+    recognition.lang = "en-IN";
 
     recognitionRef.current = recognition;
 
     let isMounted = true;
 
     recognition.onstart = () => {
-      console.log("Listening started");
+      console.log("Recognition Started");
       isRecognizingRef.current = true;
       setListening(true);
-    };
-
-    recognition.onspeechstart = () => {
-      console.log("Speech detected");
     };
 
     recognition.onend = () => {
@@ -303,9 +311,10 @@ function Home() {
         clearTimeout(restartTimerRef.current);
       }
 
-      if (isMounted && !isSpeakingRef.current) {
+      if (isMounted && !isSpeakingRef.current && !synth.speaking && !isProcessingRef.current) {
         restartTimerRef.current = setTimeout(() => {
-          if (isMounted && !isSpeakingRef.current && !isRecognizingRef.current) {
+          if (isMounted && !isSpeakingRef.current && !synth.speaking && !isProcessingRef.current && !isRecognizingRef.current) {
+            console.log("Recognition Restarted");
             try {
               recognition.start();
             } catch (e) {
@@ -324,74 +333,35 @@ function Home() {
       setListening(false);
     };
 
-    let speechDebounceTimer = null;
-
     recognition.onresult = (event) => {
-      let currentTranscript = "";
+      if (isProcessingRef.current || isSpeakingRef.current || synth.speaking) return;
 
+      let finalTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        currentTranscript += event.results[i][0]?.transcript || "";
-      }
-
-      currentTranscript = currentTranscript.trim();
-      if (!currentTranscript) return;
-
-      const isFinal = event.results[event.results.length - 1]?.isFinal;
-
-      const processRecognizedText = (text) => {
-        if (!text) return;
-        const assistantName = (userData?.assistantName || "").trim().toLowerCase();
-        let queryText = text;
-        if (assistantName && queryText.toLowerCase().includes(assistantName)) {
-          const regex = new RegExp(assistantName, "gi");
-          queryText = queryText.replace(regex, "").trim();
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0]?.transcript || "";
         }
-
-        const textToSend = queryText.length > 0 ? queryText : text;
-        console.log("Sending message to AI:", textToSend);
-        handleAskQuestion(textToSend);
-      };
-
-      if (isFinal) {
-        if (speechDebounceTimer) clearTimeout(speechDebounceTimer);
-        processRecognizedText(currentTranscript);
-        return;
       }
 
-      // Fast response: Process 450ms after user finishes speaking
-      if (speechDebounceTimer) clearTimeout(speechDebounceTimer);
-      speechDebounceTimer = setTimeout(() => {
-        processRecognizedText(currentTranscript);
-      }, 450);
+      finalTranscript = finalTranscript.trim();
+      if (!finalTranscript) return;
+
+      console.log("Final Transcript:", finalTranscript);
+
+      const assistantName = (userData?.assistantName || "").trim().toLowerCase();
+      let queryText = finalTranscript;
+      if (assistantName && queryText.toLowerCase().includes(assistantName)) {
+        const regex = new RegExp(assistantName, "gi");
+        queryText = queryText.replace(regex, "").trim();
+      }
+
+      const textToSend = queryText.length > 0 ? queryText : finalTranscript;
+      handleAskQuestion(textToSend);
     };
 
     const speakGreeting = () => {
       const greetingText = `Hello ${userData?.name || ""}, what can I help you with?`;
-      const greeting = new SpeechSynthesisUtterance(greetingText);
-      greeting.lang = "en-IN";
-      const voices = synth.getVoices();
-      const voice = voices.find((v) => v.lang.includes("en") || v.lang.includes("hi"));
-      if (voice) greeting.voice = voice;
-
-      let started = false;
-      const safeStart = () => {
-        if (!started && isMounted) {
-          started = true;
-          startRecognition();
-        }
-      };
-
-      greeting.onend = safeStart;
-      greeting.onerror = safeStart;
-
-      setTimeout(safeStart, 1500);
-
-      try {
-        synth.cancel();
-        synth.speak(greeting);
-      } catch (e) {
-        safeStart();
-      }
+      speak(greetingText, "en");
     };
 
     if (!hasGreetedRef.current) {
