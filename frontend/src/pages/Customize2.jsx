@@ -24,7 +24,7 @@ function Customize2  () {
             }else{
                 formData.append("imageUrl",selectedImage)
             }
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("token") || userData?.token;
             const headers = {
               "Content-Type": "multipart/form-data",
             };

@@ -142,7 +142,7 @@ function Home() {
     setAiText(text);
 
     utterance.onend = () => {
-      setAiText("");
+      // Keep AI response text visible on screen so user can read it
       isSpeakingRef.current = false;
       setTimeout(() => {
         startRecognition();
@@ -151,7 +151,6 @@ function Home() {
 
     utterance.onerror = (e) => {
       console.error("Speech synthesis error:", e);
-      setAiText("");
       isSpeakingRef.current = false;
       setTimeout(() => {
         startRecognition();
@@ -163,14 +162,15 @@ function Home() {
 
   const openUrl = (url) => {
     try {
-      const win = window.open(url, "_blank");
-      if (!win || win.closed || typeof win.closed === "undefined") {
-        window.location.href = url;
-      } else {
-        win.focus();
-      }
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (e) {
-      window.location.href = url;
+      window.open(url, "_blank");
     }
   };
 
